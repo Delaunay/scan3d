@@ -7,7 +7,7 @@ addons:
     packages:
       - cmake
       - cmake-data
-      - opencv
+      - libopencv-dev python-opencv
 
 compiler:
 - clang
