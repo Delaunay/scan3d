@@ -1,26 +1,28 @@
 #ifndef IMGV_PLUGIN_LEOPARD_HPP
 #define IMGV_PLUGIN_LEOPARD_HPP
 
-
-#include <opencv2/opencv.hpp>
-
-#include <stdio.h>
-#include <gmp.h>
-#include <stdlib.h>
-
 //
 // definir pour utiliser gmp plutot que les codes maison
 //
 //#define USE_GMP
 
+#ifdef USE_GMP
+#	include <gmp.h>
+#endif
+
+
+#include <opencv2/opencv.hpp>
+#include <cstdio>
+#include <cstdlib>
+#include <chrono>
 
 class minfo {
 	public:
-	int idx; // index du match dans l'autre image  idx=y*w+x,  y=idx/w, x=idx%w
-	unsigned short cost; // cout du match
-    float subpx; // souspixels en x
-    float subpy; // souspixels en y
-    unsigned char mix; // [0..255] pour un mix de [0..1]
+	int idx;				// index du match dans l'autre image  idx=y*w+x,  y=idx/w, x=idx%w
+	unsigned short cost;	// cout du match
+    float subpx;			// souspixels en x
+    float subpy;			// souspixels en y
+    unsigned char mix;		// [0..255] pour un mix de [0..1]
 	//unsigned short active; // 1 = try to find this match, 0 = do not compute this match.
 };
 
@@ -34,6 +36,35 @@ class minfo {
 #define IDX_SCAN_MEANC   1
 #define IDX_SCAN_MASKP   2
 #define IDX_SCAN_MEANP   3
+
+class Chronometer {
+public:
+	typedef std::chrono::high_resolution_clock::time_point TimePoint;
+	typedef std::chrono::high_resolution_clock::duration Duration;
+
+	Chronometer() {
+		start();
+	}
+
+	TimePoint start() {
+		_start = std::chrono::high_resolution_clock::now();
+		return _start;
+	}
+
+	template<typename T = std::milli>
+	double time() {
+		std::chrono::duration<double, T> dur = std::chrono::high_resolution_clock::now() - _start;
+		return dur.count();
+	}
+private:
+	TimePoint _start;
+};
+
+#define TIMEIT(MSG, X) {\
+	Chronometer __chrono__; \
+	{X}; \
+	printf("%s: %4.4f", MSG, __chrono__.time())\
+}
 
 class leopard {
 
@@ -124,7 +155,6 @@ class leopard {
     void dumpCodeNum(unsigned long *c);
 	int cost(unsigned long *a,unsigned long *b);
 #endif
-    double horloge();
     int bitCount(unsigned long n);
 	void match2image(cv::Mat &lut,minfo *match,unsigned char *mask,int w,int h,int ww,int hh);
     void mix2image(cv::Mat &imgmix,minfo *match,unsigned char *mask,int w,int h,int ww,int hh);

@@ -1,29 +1,16 @@
-﻿#include <QCoreApplication>
+﻿//#include <QCoreApplication>
+//#include <sys/time.h>
+//#include <sys/stat.h>
+//#include <unistd.h>
+
 #include <opencv2/opencv.hpp>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
-
-
-
-#include <leopard.hpp>
-#include <triangulation.hpp>
-#include <paths.hpp>
-
-
+#include "leopard.hpp"
+#include "triangulation.hpp"
+#include "paths.hpp"
 
 using namespace cv;
 using namespace std;
-
-
-
-double horloge() {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return( (double) tv.tv_sec + tv.tv_usec / 1000000.0);
-}
-
 
 void testLeopardSeb() {
     printf("----- test leopard seb -----\n");
@@ -101,7 +88,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
     printf("sizeof long %d\n",(int)sizeof(long));
     printf("sizeof long long %d\n",(int)sizeof(long long));
 
-    double timeS = horloge();
+	Chronometer chrono;
 
     leopard *L=new leopard();
 
@@ -177,7 +164,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
 
     printf("\n sumSuivante = %d, sumPrécédente = %d \n",sumCostS, sumCostP);
 
-    double timeSM = horloge();
+    double timeSM = chrono.time();
 
     //Choix du mix
     L->prepareMatch();
@@ -226,7 +213,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
         }
     }
 
-    double timeEM = horloge();
+	chrono.start();
     //L->forceBrute();
 
     Mat mixCam;
@@ -239,9 +226,9 @@ void testLeopardChaima(string nameCam,  string nameProj,
     imwrite(namemixP, mixProj);
 
 
-    double timeE = horloge();
-    printf("\n Time Scan = %f \n", timeE-timeS);
-    printf("\n Time match mix = %f \n", timeEM-timeSM);
+    double timeE = chrono.time();
+    printf("\n Time Scan = %f \n", timeE);
+    printf("\n Time match mix = %f \n", timeSM);
 
     delete[] imagesCam;
     delete[] imagesCamDecal;
@@ -254,7 +241,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
 
 int main(int argc, char *argv[]) {
 
-    int nbImages = 300;
+    const int nbImages = 300;
     Mat img[nbImages];
 
     Mat lutCam;
@@ -332,24 +319,26 @@ int main(int argc, char *argv[]) {
             cout << "Camera ready" << endl;
         }
 
+		/*
         srand(time(NULL));
         int random = rand() % 500000;
         cout << "random : " << random << endl;
-        usleep(random);
+		usleep(random);*/
 
-        double timeS = horloge();
+		Chronometer chrono;
+
         for(int i = 0; i < nbImages; i++) {
             cap >> img[i];
             //resize(img[i], resized[i], Size(640,480)); //(683,384)
         }
-        double timeE = horloge();
+        double timeE = chrono.time();
         double xs, ys;
         xs = cap.get(CV_CAP_PROP_FRAME_WIDTH);
         ys = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
         cout << "x = " << xs << "   y = " << ys << endl;
 
-        cout << "Time : " << (timeE - timeS) / nbImages << endl;
-        cout << "Time (" << nbImages << " images): " << (timeE - timeS) << endl;
+        cout << "Time : " << timeE / nbImages << endl;
+        cout << "Time (" << nbImages << " images): " << timeE << endl;
         waitKey(0);
 
         namedWindow("Display Image", 1);

@@ -1,9 +1,8 @@
 #ifndef TRIANGULATION_HPP
 #define TRIANGULATION_HPP
 
-
 #include <opencv2/opencv.hpp>
-#include <stdio.h>
+#include <cstdio>
 
 //triangulation (Proj -> Cam = 0) , (Cam -> Proj = 1)
 #define TR_CAM 1
@@ -41,7 +40,7 @@ class triangulation {
     ~triangulation();
 
     void triangulate(cv::Mat lutCam, cv::Mat lutProj);
-    void setPathT(int idx, std::__cxx11::string path, const char *filename);
+    void setPathT(int idx, std::string path, const char *filename);
 
 
     private:

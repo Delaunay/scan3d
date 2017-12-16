@@ -3,7 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 
 
 //Dossier principal pour contenir tous les output

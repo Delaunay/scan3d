@@ -1,10 +1,11 @@
-#include <QCoreApplication>
-#include <opencv2/opencv.hpp>
-#include <sys/time.h>
-#include <unistd.h>
-#include <stdio.h>
+//#include <QCoreApplication>
+//#include <sys/time.h>
+//#include <unistd.h>
 
-#include <triangulation.hpp>
+#include <opencv2/opencv.hpp>
+#include <cstdio>
+
+#include "triangulation.hpp"
 
 using namespace cv;
 using namespace std;

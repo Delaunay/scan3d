@@ -1,7 +1,31 @@
-#include <fstream>
-#include <leopard.hpp>
+#include "leopard.hpp"
 
-#include <sys/time.h>
+#include <fstream>
+#include <array>
+#include <vector>
+
+
+#ifndef M_PI
+#	define M_PI 3.14159265359
+#endif
+
+
+#ifndef __linux__
+#include <random>
+
+std::mt19937& random_engine() {
+	std::random_device rd;
+	static std::mt19937 engine(rd());
+	return engine;
+}
+
+// non-negative, double-precision, floating-point values, uniformly distributed over the interval [0.0 , 1.0].
+double drand48() {
+	static std::uniform_real_distribution<> dist(0, 1);
+	return dist(random_engine());
+}
+#endif
+
 
 
 //
@@ -79,12 +103,12 @@ leopard::~leopard() {
     unInitSP();
 }
 
-
+/*
 double leopard::horloge() {
 	struct timeval tv;
 	gettimeofday(&tv,NULL);
 	return((double)tv.tv_sec+tv.tv_usec/1000000.0);
-}
+}*/
 
 //On passe le nom des images
 cv::Mat *leopard::readImages(char *name,int from,int to, double fct) {
@@ -563,7 +587,7 @@ void leopard::computeCodes(int cam,int type,cv::Mat *img) {
 
         for(int i=0;i<w*h*nb;i++) code[i]=0;
 
-        double t1=horloge();
+		Chronometer chrono;
         int b;
         unsigned long mask;
         int nbk=0; // compte les codes
@@ -583,8 +607,8 @@ void leopard::computeCodes(int cam,int type,cv::Mat *img) {
                 nbk++;
             }
         }
-        double t2=horloge();
-        printf("duree=%12.6f\n",t2-t1);
+        double t2=chrono.time();
+        printf("duree=%12.6f\n",t2);
         //int j=900*w+1200;
         int j = 200 * w + 300;
         while( pmask[j]==0 ) j++;
@@ -810,7 +834,7 @@ void leopard::forceBrute(int sp, unsigned char mix) {
 }
 #else
 void leopard::forceBrute(int sp, unsigned char mix) {
-    double t1=horloge();
+	Chronometer chrono;
 	int step=wc*hc/100;
 	for(int i=0;i<wc*hc;i++) {
 		if( i%step==0 ) printf("%d %%\n",i*100/wc/hc);
@@ -832,8 +856,8 @@ void leopard::forceBrute(int sp, unsigned char mix) {
             }
 		}
 	}
-    double t2=horloge();
-    printf("temps=%12.6f\n",t2-t1);
+    double t2 = chrono.time();
+    printf("temps=%12.6f\n", t2);
 }
 #endif
 
@@ -874,10 +898,10 @@ int leopard::lsh(int dir,unsigned long *codeA,minfo *matchA,unsigned char *maskA
                   unsigned long *codeB,minfo *matchB,unsigned char *maskB,int wb,int hb,
                  int aisCam, unsigned char mix) {
 #endif
-    int nv=20; // nb de bits pour le vote
+    const int nv=20; // nb de bits pour le vote
 	int nbvote=(1<<nv);
 	bminfo bm[nv];
-	double now=horloge();
+	Chronometer chrono;
 
     //log << "lsh " << nv << " bits, allocate "<< ((1<<nv)*sizeof(int)) << " bytes"<<warn;
 
@@ -1019,7 +1043,7 @@ int leopard::lsh(int dir,unsigned long *codeA,minfo *matchA,unsigned char *maskA
             }
 #endif
 	}
-	now=horloge()-now;
+	double now = chrono.time();
 
 	// somme des couts
     int delta=0;
@@ -1100,7 +1124,8 @@ int leopard::doShiftCodes() {
 //    string const myFile("/home/chaima/Documents/Mathematica/Sum.txt");
 //    std::ofstream sumVide(myFile.c_str());
 
-    int sum[nbb];
+	std::vector<int> sum(nbb);
+
     for(int i=0; i<nbb; i++) {
 
         printf("\n\n--------------------- itr %d ---------%3d%% --------------------- \n\n",
@@ -1182,7 +1207,7 @@ int leopard::heuristique(unsigned long *codeA,minfo *matchA,unsigned char *maskA
 	// on regarde si on pourrait creer un match cam[autour de i] vers proj[j]
 	int di[8]={-1,1,-wa,wa,-1-wa,-1+wa,1-wa,1+wa};
 	int dj[8]={-1,1,-wb,wb,-1-wb,-1+wb,1-wb,1+wb};
-	double now=horloge();
+	Chronometer chrono;
 
 	int i,j,k;
 	for(i=0;i<wa*ha;i++) {
@@ -1208,7 +1233,7 @@ int leopard::heuristique(unsigned long *codeA,minfo *matchA,unsigned char *maskA
 		}
 		
 	}
-	now=horloge()-now;
+	double now = chrono.time();
     printf("time = %12.6f\n",now);
 	// somme des couts
     /*
