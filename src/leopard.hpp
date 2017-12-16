@@ -26,16 +26,19 @@ class minfo {
 	//unsigned short active; // 1 = try to find this match, 0 = do not compute this match.
 };
 
-
 // type de code binaire
-#define LEOPARD_SIMPLE  0
-#define LEOPARD_QUADRATIC  1
+enum LeopardMode{
+	LEOPARD_SIMPLE = 0,
+	LEOPARD_QUADRATIC = 1
+};
 
 // strings pour les noms de fichier
-#define IDX_SCAN_MASKC   0
-#define IDX_SCAN_MEANC   1
-#define IDX_SCAN_MASKP   2
-#define IDX_SCAN_MEANP   3
+enum LeopardFiles{
+	IDX_SCAN_MASKC = 0,
+	IDX_SCAN_MEANC = 1,
+	IDX_SCAN_MASKP = 2,
+	IDX_SCAN_MEANP = 3
+};
 
 class Chronometer {
 public:
@@ -51,7 +54,7 @@ public:
 		return _start;
 	}
 
-	template<typename T = std::milli>
+	template<typename T = std::ratio<1, 1>>
 	double time() {
 		std::chrono::duration<double, T> dur = std::chrono::high_resolution_clock::now() - _start;
 		return dur.count();

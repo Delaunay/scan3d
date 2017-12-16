@@ -181,8 +181,8 @@ void testLeopardChaima(string nameCam,  string nameProj,
 
             //TEST: pas de cumul
             //L->prepareMatch();
-            for(int j=0; j<20; j++)
-                L.doLsh(sp,(int) (fct*255));
+            for(int j = 0; j < 20; j++)
+                L.doLsh(sp, int(fct * 255));
 
 
             //L->forceBrute(sp,(int) (fct*255));
@@ -204,7 +204,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
             //TEST: pas de cumul
             //L->prepareMatch();
             for(int j=0; j<20; j++)
-                L.doLsh(sp,(int) (fct*255));
+                L.doLsh(sp, int(fct * 255));
 
 
             //L->forceBrute(sp,(int) (fct*255));
@@ -236,7 +236,7 @@ void testLeopardChaima(string nameCam,  string nameProj,
 // Capture projected image onto the object using the camera
 // Save the images in  
 // std::vector<Mat> 
-bool capture(int image_number, const std::string& name_format, int img_width = 1920, int img_height = 1080, int fps = 30, int sleep_time = 1000) {
+std::tuple<std::vector<Mat>, bool> capture(int image_number, const std::string& name_format, int img_width = 1920, int img_height = 1080, int fps = 30, int sleep_time = 1000) {
 	printf("----- Capture -----\n");
 	std::vector<Mat> img(image_number);
 
@@ -251,7 +251,7 @@ bool capture(int image_number, const std::string& name_format, int img_width = 1
 
 	if (!cap.isOpened()) {
 		cout << "Camera error" << endl;
-		return false; // std::vector<Mat>();
+		return std::make_tuple(std::vector<Mat>(), false);
 	}
 	else {
 		cout << "Camera ready" << endl;
@@ -285,7 +285,7 @@ bool capture(int image_number, const std::string& name_format, int img_width = 1
 
 	printf("----- Capture done -----\n");
 	printf("\n\n");
-	return true;
+	return std::make_tuple(img, true);
 }
 
 int main(int argc, char *argv[]) {
@@ -341,10 +341,12 @@ int main(int argc, char *argv[]) {
 
     /* ----------------------- Capture ----------------------- */
 	
-	// testing the absence of symchronization 
+	// testing the absence of synchronization 
 	int sleep_time = 20;
 
-	if (doCapture) capture(nbImages, FN_CAP_CAM, 1920, 1080, 30, sleep_time);
+	if (doCapture) {
+		std::tie(img, std::ignore) = capture(nbImages, FN_CAP_CAM, 1920, 1080, 30, sleep_time);
+	}
 
     /* ----------------------- Scan 3D ----------------------- */
 	Mat lutCam;

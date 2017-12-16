@@ -58,7 +58,7 @@ int triangulation::initMat(const string& file, Mat &internes, Mat &rotation, Mat
     return 0;
 }
 
-void triangulation::composePoseMatrix(Mat &poseMatrix, Mat rotation, Mat translation) {
+void triangulation::composePoseMatrix(Mat &poseMatrix, const Mat& rotation, const Mat& translation) {
 
     Mat idt = Mat::eye(3, 4, CV_64F);
     Mat mat_trans = Mat::eye(4, 4, CV_64F);
@@ -94,12 +94,13 @@ double randAOrB(double a, double b) {
     return (rand()%2) * (b-a) + a;
 }
 
-int triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, Mat lutSrc, Mat lutDst) {
+int triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, const Mat& lutSrc, const Mat& lutDst) {
 
     int lutSrc_r = lutSrc.rows;
     int lutSrc_c = lutSrc.cols;
     int lutDst_r = lutDst.rows;
     int lutDst_c = lutDst.cols;
+
     cout << "LutSrc(r,c)  " << lutSrc_r << "  " << lutSrc_c << endl;
     cout << "LutDst(r,c)  " << lutDst_r << "  " << lutDst_c << endl;
 

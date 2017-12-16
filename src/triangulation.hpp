@@ -5,13 +5,18 @@
 #include <cstdio>
 
 //triangulation (Proj -> Cam = 0) , (Cam -> Proj = 1)
-#define TR_CAM 1
+enum TriangulationMode{
+	TR_PROJ = 0,
+	TR_CAM = 1
+};
 
 // strings pour les noms de fichier
-#define IDX_TR_MASK   0
-#define IDX_TR_DATA   1
-#define IDX_TR_PARC   2
-#define IDX_TR_PARP   3
+enum TriangulationFiles{
+	IDX_TR_MASK =  0,
+	IDX_TR_DATA =  1,
+	IDX_TR_PARC =  2,
+	IDX_TR_PARP =  3
+};
 
 class triangulation {
 
@@ -40,18 +45,22 @@ class triangulation {
     ~triangulation();
 
     void triangulate(const cv::Mat& lutCam, const cv::Mat& lutProj);
+
     void setPathT(int idx, const std::string& path, const char *filename);
 
-
     private:
+
     int initMat(const std::string& file, cv::Mat &internes, cv::Mat &rotation, cv::Mat &translation, cv::Mat &distCoeffs);
-    int matrixCorr(cv::Mat &pointsLut, cv::Mat &pointsCorr, cv::Mat lutSrc, cv::Mat lutDst);
-    int saveMat(const cv::Mat& point4D);
-    int lut2corr(const cv::Mat& lutSrc, const cv::Mat& internesSrc, const cv::Mat& distCoeffsSrc, cv::Mat &pointsUndSrc,
+    
+	int matrixCorr(cv::Mat &pointsLut, cv::Mat &pointsCorr, const cv::Mat& lutSrc, const cv::Mat& lutDst);
+    
+	int saveMat(const cv::Mat& point4D);
+    
+	int lut2corr(const cv::Mat& lutSrc, const cv::Mat& internesSrc, const cv::Mat& distCoeffsSrc, cv::Mat &pointsUndSrc,
                  const cv::Mat& lutDst, const cv::Mat& internesDst, const cv::Mat& distCoeffsDst, cv::Mat &pointsUndDst);
 
-
-    void composePoseMatrix(cv::Mat &poseMatrix, cv::Mat rotation, cv::Mat translation);
+    void composePoseMatrix(cv::Mat &poseMatrix, const cv::Mat& rotation, const cv::Mat& translation);
+	
 	cv::Mat undistortMatrix(const cv::Mat& pointsInput, const cv::Mat& internes, const cv::Mat& distCoeffs);
 };
 
