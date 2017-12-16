@@ -130,18 +130,23 @@ class leopard {
 	leopard(); //int w,int h, int nb, int freq, bool blur,string pid);
 	~leopard();
 
-    cv::Mat *readImages(char *name, int from, int to, double fct);
-    cv::Mat *readImages2(cv::Mat *cam, int from, int to);
-    void computeMask(int cam,cv::Mat *img,int nb,double seuil,double bias,int step,int xmin,int xmax,int ymin,int ymax);
-    void computeCodes(int cam,int type,cv::Mat *img);
+	std::vector<cv::Mat> readImages(const char *name, int from, int to, double fct);
+	std::vector<cv::Mat> readImages2(const std::vector<cv::Mat>& cam, int from, int to);
+    void computeMask(int cam, const std::vector<cv::Mat>& img,int nb,double seuil,double bias,int step,int xmin,int xmax,int ymin,int ymax);
+    void computeCodes(int cam,int type, const std::vector<cv::Mat>& img);
     void prepareMatch();
     void forceBrute(int sp, unsigned char mix);
-    void makeLUT(cv::Mat &lut, cv::Mat &imgmix, int cam);
+
+	// Return std::tuple<LUT, MIX>
+	std::tuple<cv::Mat, cv::Mat> makeLUT(int cam);
+
     int doLsh(int sp, unsigned char mix);
     int doHeuristique();
     int doShiftCodes();
+
     int sumCost();
     void statsCodes(int cam);
+
     void setPathL(int idx, std::string path, const char *filename);
 
 

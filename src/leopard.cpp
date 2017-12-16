@@ -111,12 +111,12 @@ double leopard::horloge() {
 }*/
 
 //On passe le nom des images
-cv::Mat *leopard::readImages(char *name,int from,int to, double fct) {
+std::vector<cv::Mat> leopard::readImages(const char *name,int from,int to, double fct) {
     printf("-- reading images %s --\n",name);
     int nb,i;
     char buf[300];
     nb=to-from+1;
-    Mat *image=new Mat[nb];
+	std::vector<cv::Mat> image(nb);
     int w=0,h=0;
 
     for(i=0;i<nb;i++) {
@@ -136,8 +136,7 @@ cv::Mat *leopard::readImages(char *name,int from,int to, double fct) {
         }else{
             if( w!=image[i].cols || h!=image[i].rows ) {
                 printf("Images %d pas de la meme taille!\n",i+from);
-                delete[] image;
-                return NULL;
+                return std::vector<cv::Mat>();
             }
         }
     }
@@ -145,11 +144,11 @@ cv::Mat *leopard::readImages(char *name,int from,int to, double fct) {
 }
 
 //On passe les images directement
-cv::Mat *leopard::readImages2(Mat *cam,int from,int to) {
+std::vector<cv::Mat> leopard::readImages2(const std::vector<Mat>& cam,int from,int to) {
     printf("-- reading images camera --\n");
     int nb,i;
     nb=to-from+1;
-    Mat *image=new Mat[nb];
+	std::vector<cv::Mat> image(nb);
     int w=0,h=0;
 
     for(i=0;i<nb;i++) {  
@@ -161,8 +160,7 @@ cv::Mat *leopard::readImages2(Mat *cam,int from,int to) {
         }else{
             if( w!=image[i].cols || h!=image[i].rows ) {
                 printf("Images %d pas de la meme taille!\n",i+from);
-                delete[] image;
-                return NULL;
+                return std::vector<cv::Mat>();
             }
         }
     }
@@ -178,7 +176,7 @@ cv::Mat *leopard::readImages2(Mat *cam,int from,int to) {
 // offx,offy : decallage x,y. DOIT ETRE <step
 //
 
-void leopard::computeMask(int cam,cv::Mat *img,int nb,double seuil,double bias,int step,int xmin,int xmax,int ymin,int ymax) {
+void leopard::computeMask(int cam, const std::vector<cv::Mat>& img,int nb,double seuil,double bias,int step,int xmin,int xmax,int ymin,int ymax) {
     int nr=img[0].rows;
     int nc=img[0].cols;
     cv::Mat min,max,delta,mask;
@@ -502,7 +500,7 @@ void leopard::computeCodes(int cam,int type,cv::Mat *img) {
 
 #else
 
-void leopard::computeCodes(int cam,int type,cv::Mat *img) {
+void leopard::computeCodes(int cam,int type, const std::vector<cv::Mat>& img) {
     printf("-- compute codes cam=%d type=%d n=%d --\n",cam,type,n);
 
     int w,h;
@@ -1300,8 +1298,10 @@ int leopard::cost(unsigned long *a,unsigned long *b) {
 }
 #endif
 
-void leopard::makeLUT(cv::Mat &lut,cv::Mat &imgmix,int cam) {
-    if( cam )	{
+std::tuple<cv::Mat, cv::Mat> leopard::makeLUT(int cam) {
+	cv::Mat imgmix;
+	cv::Mat lut;
+	if( cam )	{
         match2image(lut,matchCam,maskCam,wc,hc,wp,hp);
         mix2image(imgmix,matchCam,maskCam,wc,hc,wp,hp);
     }
@@ -1309,6 +1309,7 @@ void leopard::makeLUT(cv::Mat &lut,cv::Mat &imgmix,int cam) {
         match2image(lut,matchProj,maskProj,wp,hp,wc,hc);
         mix2image(imgmix,matchProj,maskProj,wp,hp,wc,hc);
     }
+	return std::make_tuple(lut, imgmix);
 }
 
 // output une image pour le match (imager w x h) vers une image ww x hh

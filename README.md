@@ -19,11 +19,11 @@ Code de scan 3D, cam1 et proj1 servent d'exemple
 
 # Build
 
-		git clone ...
-		cd scan3d
-		mkdir build
-		cd build
-		cmake ../
+	git clone ...
+	cd scan3d
+	mkdir build
+	cd build
+	cmake ../
 		
 
 

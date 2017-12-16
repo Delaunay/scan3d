@@ -39,23 +39,20 @@ class triangulation {
     triangulation();
     ~triangulation();
 
-    void triangulate(cv::Mat lutCam, cv::Mat lutProj);
-    void setPathT(int idx, std::string path, const char *filename);
+    void triangulate(const cv::Mat& lutCam, const cv::Mat& lutProj);
+    void setPathT(int idx, const std::string& path, const char *filename);
 
 
     private:
-    int initMat(std::string file, cv::Mat &internes, cv::Mat &rotation, cv::Mat &translation, cv::Mat &distCoeffs);
+    int initMat(const std::string& file, cv::Mat &internes, cv::Mat &rotation, cv::Mat &translation, cv::Mat &distCoeffs);
     int matrixCorr(cv::Mat &pointsLut, cv::Mat &pointsCorr, cv::Mat lutSrc, cv::Mat lutDst);
-    int saveMat(cv::Mat point4D);
-    int lut2corr(cv::Mat lutSrc, cv::Mat internesSrc, cv::Mat distCoeffsSrc, cv::Mat &pointsUndSrc,
-                 cv::Mat lutDst, cv::Mat internesDst, cv::Mat distCoeffsDst, cv::Mat &pointsUndDst);
+    int saveMat(const cv::Mat& point4D);
+    int lut2corr(const cv::Mat& lutSrc, const cv::Mat& internesSrc, const cv::Mat& distCoeffsSrc, cv::Mat &pointsUndSrc,
+                 const cv::Mat& lutDst, const cv::Mat& internesDst, const cv::Mat& distCoeffsDst, cv::Mat &pointsUndDst);
 
 
     void composePoseMatrix(cv::Mat &poseMatrix, cv::Mat rotation, cv::Mat translation);
-    void undistortMatrix(cv::Mat &pointsOutput, cv::Mat pointsInput, cv::Mat internes, cv::Mat distCoeffs);
-
-
-
+	cv::Mat undistortMatrix(const cv::Mat& pointsInput, const cv::Mat& internes, const cv::Mat& distCoeffs);
 };
 
 

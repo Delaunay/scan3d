@@ -36,19 +36,16 @@ triangulation::triangulation() {
 
 }
 
-
-
 triangulation::~triangulation() {
     cout << endl;
     cout << "----- Triangulation Done -----" << endl;
 }
 
-
-int triangulation::initMat(string file, Mat &internes, Mat &rotation, Mat &translation, Mat &distCoeffs) {
+int triangulation::initMat(const string& file, Mat &internes, Mat &rotation, Mat &translation, Mat &distCoeffs) {
 
     FileStorage fsI(file, FileStorage::READ);
     if(!fsI.isOpened()) {
-        cout << "Erreur! Le fichier Init n'est pas ouvert! \n" << endl;
+        cout << "Erreur! Le fichier '" << file << "'  n'est pas ouvert! \n" << endl;
         return -1;
     }
 
@@ -161,7 +158,7 @@ int triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, Mat lutSrc, Mat l
     return n;
 }
 
-void triangulation::undistortMatrix(Mat &pointsOutput, Mat pointsInput, Mat internes, Mat distCoeffs) {
+Mat triangulation::undistortMatrix(const Mat& pointsInput, const Mat& internes,  const Mat& distCoeffs) {
 
     Mat pointsInputTr = pointsInput.t();
     Mat points1D = Mat(pointsInputTr.rows, 1, CV_64FC2);
@@ -172,23 +169,27 @@ void triangulation::undistortMatrix(Mat &pointsOutput, Mat pointsInput, Mat inte
     for(int i=0; i<pointsInputTr.rows*2; i++)
         q[i] = p[i];
 
-    pointsOutput = Mat(pointsInputTr.rows, 1, CV_64FC2);
+    Mat pointsOutput = Mat(pointsInputTr.rows, 1, CV_64FC2);
     undistortPoints(points1D, pointsOutput, internes, distCoeffs);
     double *r = (double*) pointsOutput.data;
 
     for(int i=0; i<pointsInputTr.rows;i+=(pointsInputTr.rows/2))
-    cout  << q[0+i*2] << ", " << q[1+i*2] << "  ->  " << r[0+i*2] << " , " << r[1+i*2] << endl;
+    cout << q[0 + i * 2] << ", " << q[1 + i * 2] << "  ->  " 
+		 << r[0 + i * 2] << ", " << r[1 + i * 2] << endl;
+	return pointsOutput;
 }
 
-int triangulation::lut2corr(Mat lutSrc, Mat internesSrc, Mat distCoeffsSrc, Mat &pointsUndSrc,
-         Mat lutDst, Mat internesDst, Mat distCoeffsDst, Mat &pointsUndDst) {
+int triangulation::lut2corr(
+	const Mat& lutSrc, const Mat& internesSrc, const Mat& distCoeffsSrc, Mat &pointsUndSrc,
+	const Mat& lutDst, const Mat& internesDst, const Mat& distCoeffsDst, Mat &pointsUndDst) {
 
     Mat pointsSrc;
     Mat pointsDst;
-    cout << endl << endl;
-    cout << "--------------------------" << endl;
-    cout << "Taille des Luts :" << endl;
-    cout << "--------------------------" << endl;
+
+    cout << endl << endl
+		<< "--------------------------" << endl
+		<< "Taille des Luts :" << endl
+		<< "--------------------------" << endl;
 
     int size = matrixCorr(pointsSrc, pointsDst, lutSrc, lutDst);
 
@@ -196,16 +197,17 @@ int triangulation::lut2corr(Mat lutSrc, Mat internesSrc, Mat distCoeffsSrc, Mat 
     cout << "--------------------------" << endl;
     cout << "Undistort points : " << size << endl;
     cout << "--------------------------" << endl;
+
     //Undistort points Source
-    undistortMatrix(pointsUndSrc, pointsSrc, internesSrc, distCoeffsSrc);
+	pointsUndSrc = undistortMatrix(pointsSrc, internesSrc, distCoeffsSrc);
 
     //Undistort points Destination
-    undistortMatrix(pointsUndDst, pointsDst, internesDst, distCoeffsDst);
+	pointsUndDst = undistortMatrix(pointsDst, internesDst, distCoeffsDst);
 
     return size;
 }
 
-int triangulation::saveMat(Mat point4D) {
+int triangulation::saveMat(const Mat& point4D) {
 
     FileStorage fsS(fn_tr_data, FileStorage::WRITE);
     if(!fsS.isOpened()) {
@@ -221,7 +223,7 @@ int triangulation::saveMat(Mat point4D) {
 }
 
 
-void triangulation::triangulate(Mat lutCam, Mat lutProj) {
+void triangulation::triangulate(const Mat& lutCam, const Mat& lutProj) {
 
     /* ---Projecteur--- */
 
@@ -316,9 +318,9 @@ void triangulation::triangulate(Mat lutCam, Mat lutProj) {
 }
 
 
-void triangulation::setPathT(int idx,string path,const char *filename) {
+void triangulation::setPathT(int idx, const string& path, const char *filename) {
 
-    string newfilename = path + (string) filename;
+    string newfilename = path + string(filename);
 
     switch( idx ) {
         case IDX_TR_MASK : fn_tr_mask=strdup(newfilename.c_str());break;
