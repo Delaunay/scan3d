@@ -1,33 +1,25 @@
 #ifndef TRIANGULATION_HPP
 #define TRIANGULATION_HPP
 
-#include <opencv2/opencv.hpp>
 #include <cstdio>
+#include <opencv2/opencv.hpp>
 
-//triangulation (Proj -> Cam = 0) , (Cam -> Proj = 1)
-enum TriangulationMode{
-	TR_PROJ = 0,
-	TR_CAM = 1
-};
+// triangulation (Proj -> Cam = 0) , (Cam -> Proj = 1)
+enum TriangulationMode { TR_PROJ = 0, TR_CAM = 1 };
 
 // strings pour les noms de fichier
-enum TriangulationFiles{
-	IDX_TR_MASK =  0,
-	IDX_TR_DATA =  1,
-	IDX_TR_PARC =  2,
-	IDX_TR_PARP =  3
-};
+enum TriangulationFiles { IDX_TR_MASK = 0, IDX_TR_DATA = 1, IDX_TR_PARC = 2, IDX_TR_PARP = 3 };
 
 class triangulation {
 
-    //projector
+    // projector
     cv::Mat internes_proj;
     cv::Mat rotation_proj;
     cv::Mat translation_proj;
     cv::Mat distCoeffs_proj;
     cv::Mat poseMatrix_proj;
 
-    //camera
+    // camera
     cv::Mat internes_cam;
     cv::Mat rotation_cam;
     cv::Mat translation_cam;
@@ -40,30 +32,32 @@ class triangulation {
     const char *fn_tr_parc;
     const char *fn_tr_parp;
 
-    public:
+  public:
     triangulation();
     ~triangulation();
 
-    void triangulate(const cv::Mat& lutCam, const cv::Mat& lutProj);
+    void triangulate(const cv::Mat &lutCam, const cv::Mat &lutProj);
 
-    void setPathT(int idx, const std::string& path, const char *filename);
+    void setPathT(int idx, const std::string &path, const char *filename);
 
-    private:
+  private:
+    int initMat(const std::string &file, cv::Mat &internes, cv::Mat &rotation, cv::Mat &translation,
+                cv::Mat &distCoeffs);
 
-    int initMat(const std::string& file, cv::Mat &internes, cv::Mat &rotation, cv::Mat &translation, cv::Mat &distCoeffs);
-    
-	int matrixCorr(cv::Mat &pointsLut, cv::Mat &pointsCorr, const cv::Mat& lutSrc, const cv::Mat& lutDst);
-    
-	int saveMat(const cv::Mat& point4D);
-    
-	int lut2corr(const cv::Mat& lutSrc, const cv::Mat& internesSrc, const cv::Mat& distCoeffsSrc, cv::Mat &pointsUndSrc,
-                 const cv::Mat& lutDst, const cv::Mat& internesDst, const cv::Mat& distCoeffsDst, cv::Mat &pointsUndDst);
+    int matrixCorr(cv::Mat &pointsLut, cv::Mat &pointsCorr, const cv::Mat &lutSrc,
+                   const cv::Mat &lutDst);
 
-    void composePoseMatrix(cv::Mat &poseMatrix, const cv::Mat& rotation, const cv::Mat& translation);
-	
-	cv::Mat undistortMatrix(const cv::Mat& pointsInput, const cv::Mat& internes, const cv::Mat& distCoeffs);
+    int saveMat(const cv::Mat &point4D);
+
+    int lut2corr(const cv::Mat &lutSrc, const cv::Mat &internesSrc, const cv::Mat &distCoeffsSrc,
+                 cv::Mat &pointsUndSrc, const cv::Mat &lutDst, const cv::Mat &internesDst,
+                 const cv::Mat &distCoeffsDst, cv::Mat &pointsUndDst);
+
+    void composePoseMatrix(cv::Mat &poseMatrix, const cv::Mat &rotation,
+                           const cv::Mat &translation);
+
+    cv::Mat undistortMatrix(const cv::Mat &pointsInput, const cv::Mat &internes,
+                            const cv::Mat &distCoeffs);
 };
 
-
 #endif // TRIANGULATION_HPP
-

@@ -1,7 +1,7 @@
 # required for C++11 features
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 
-PROJECT(scan3d)
+PROJECT(scan3d CXX)
 
 # debug/release
 SET(CMAKE_RELEASE_POSTFIX "")                  # Release is the default
@@ -41,6 +41,7 @@ OPTION(BUILD_SPHINX         "Build Sphinx docs"  OFF)
 # Binary/pre-compiled Dependencies
 # ====================================
 
+# SET(OPENCV_DIR C:/Users/Setepenre/dist/opencv)
 FIND_PACKAGE(OpenCV REQUIRED core photo video imgproc calib3d highgui)
 
 # Subdirectories

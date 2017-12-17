@@ -7,67 +7,63 @@
 //#define USE_GMP
 
 #ifdef USE_GMP
-#	include <gmp.h>
+#include <gmp.h>
 #endif
 
-
-#include <opencv2/opencv.hpp>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <chrono>
+#include <opencv2/opencv.hpp>
 
 class minfo {
-	public:
-	int idx;				// index du match dans l'autre image  idx=y*w+x,  y=idx/w, x=idx%w
-	unsigned short cost;	// cout du match
-    float subpx;			// souspixels en x
-    float subpy;			// souspixels en y
-    unsigned char mix;		// [0..255] pour un mix de [0..1]
-	//unsigned short active; // 1 = try to find this match, 0 = do not compute this match.
+  public:
+    int idx;             // index du match dans l'autre image  idx=y*w+x,  y=idx/w, x=idx%w
+    unsigned short cost; // cout du match
+    float subpx;         // souspixels en x
+    float subpy;         // souspixels en y
+    unsigned char mix;   // [0..255] pour un mix de [0..1]
+                         // unsigned short active; // 1 = try to find this match, 0
+                         // = do not compute this match.
 };
 
 // type de code binaire
-enum LeopardMode{
-	LEOPARD_SIMPLE = 0,
-	LEOPARD_QUADRATIC = 1
-};
+enum LeopardMode { LEOPARD_SIMPLE = 0, LEOPARD_QUADRATIC = 1 };
 
 // strings pour les noms de fichier
-enum LeopardFiles{
-	IDX_SCAN_MASKC = 0,
-	IDX_SCAN_MEANC = 1,
-	IDX_SCAN_MASKP = 2,
-	IDX_SCAN_MEANP = 3
+enum LeopardFiles {
+    IDX_SCAN_MASKC = 0,
+    IDX_SCAN_MEANC = 1,
+    IDX_SCAN_MASKP = 2,
+    IDX_SCAN_MEANP = 3
 };
 
 class Chronometer {
-public:
-	typedef std::chrono::high_resolution_clock::time_point TimePoint;
-	typedef std::chrono::high_resolution_clock::duration Duration;
+  public:
+    typedef std::chrono::high_resolution_clock::time_point TimePoint;
+    typedef std::chrono::high_resolution_clock::duration Duration;
 
-	Chronometer() {
-		start();
-	}
+    Chronometer() { start(); }
 
-	TimePoint start() {
-		_start = std::chrono::high_resolution_clock::now();
-		return _start;
-	}
+    TimePoint start() {
+        _start = std::chrono::high_resolution_clock::now();
+        return _start;
+    }
 
-	template<typename T = std::ratio<1, 1>>
-	double time() {
-		std::chrono::duration<double, T> dur = std::chrono::high_resolution_clock::now() - _start;
-		return dur.count();
-	}
-private:
-	TimePoint _start;
+    template <typename T = std::ratio<1, 1>> double time() {
+        std::chrono::duration<double, T> dur = std::chrono::high_resolution_clock::now() - _start;
+        return dur.count();
+    }
+
+  private:
+    TimePoint _start;
 };
 
-#define TIMEIT(MSG, X) {\
-	Chronometer __chrono__; \
-	{X}; \
-	printf("%s: %4.4f", MSG, __chrono__.time())\
-}
+#define TIMEIT(MSG, X)                                                                             \
+    {                                                                                              \
+        Chronometer __chrono__;                                                                    \
+        {X};                                                                                       \
+        printf("%s: %4.4f", MSG, __chrono__.time())                                                \
+    }
 
 class leopard {
 
@@ -75,15 +71,15 @@ class leopard {
     // set by computeMask
     //
 
-	int n; // the count of images
-	int wc,hc; // width and height of camera image
-	int wp,hp; // width and height of projector image
+    int n;      // the count of images
+    int wc, hc; // width and height of camera image
+    int wp, hp; // width and height of projector image
 
     // [wc*hc] access [y*wc+x]
     unsigned char *maskCam;
     // [wp*hp] access [y*wp+x]
     unsigned char *maskProj;
-    
+
     //
     // set by computeCode
     // (can be called many times, no problem)
@@ -92,35 +88,34 @@ class leopard {
     int nbb; // number of bits in the code (ex: 120)
 
 #ifdef USE_GMP
-	// codes for camera [wc*hc] access [y*wc+x] ou [i]
-	mpz_t *codeCam;
-	// codes for projector [wp*hp] access [y*wp+x] ou [i]
-	mpz_t *codeProj;
+             // codes for camera [wc*hc] access [y*wc+x] ou [i]
+    mpz_t *codeCam;
+    // codes for projector [wp*hp] access [y*wp+x] ou [i]
+    mpz_t *codeProj;
 #else
-	int nb; // number of long in the code =(nbb+63)/64
-	// codes for camera [wc*hc*nb] access [(y*wc+x)*nb+b] ou [i*nb+b]
-	unsigned long *codeCam;
-	// codes for projector [wp*hp*nb] access [(y*wp+x)*nb+b] ou [i*nb+b]
-	unsigned long *codeProj;
+    int nb; // number of long in the code =(nbb+63)/64
+    // codes for camera [wc*hc*nb] access [(y*wc+x)*nb+b] ou [i*nb+b]
+    unsigned long *codeCam;
+    // codes for projector [wp*hp*nb] access [(y*wp+x)*nb+b] ou [i*nb+b]
+    unsigned long *codeProj;
 #endif
 
+    // match for camera [wc*hc] access [y*wc+x] -> index into projector image, and
+    // cost
+    minfo *matchCam;
+    // match for projector [wp*hp] access [y*hp+x] -> index into camera image, and
+    // cost
+    minfo *matchProj;
 
+    // pour LSH
+    int *vote;
 
+    cv::Mat minCam, maxCam;
+    cv::Mat minProj, maxProj;
 
-	// match for camera [wc*hc] access [y*wc+x] -> index into projector image, and cost
-	minfo *matchCam;
-	// match for projector [wp*hp] access [y*hp+x] -> index into camera image, and cost
-	minfo *matchProj;
-
-	// pour LSH
-	int *vote;
-
-	cv::Mat minCam,maxCam;
-	cv::Mat minProj,maxProj;
-
-    //SousPixels
+    // SousPixels
     int wDecal;
-    int *ptsCam,*ptsProj;
+    int *ptsCam, *ptsProj;
 
     // filenames
     const char *fn_scan_maskc;
@@ -128,20 +123,20 @@ class leopard {
     const char *fn_scan_maskp;
     const char *fn_scan_meanp;
 
+  public:
+    leopard(); // int w,int h, int nb, int freq, bool blur,string pid);
+    ~leopard();
 
-    public:
-	leopard(); //int w,int h, int nb, int freq, bool blur,string pid);
-	~leopard();
-
-	std::vector<cv::Mat> readImages(const char *name, int from, int to, double fct);
-	std::vector<cv::Mat> readImages2(const std::vector<cv::Mat>& cam, int from, int to);
-    void computeMask(int cam, const std::vector<cv::Mat>& img,int nb,double seuil,double bias,int step,int xmin,int xmax,int ymin,int ymax);
-    void computeCodes(int cam,int type, const std::vector<cv::Mat>& img);
+    std::vector<cv::Mat> readImages(const char *name, int from, int to, double fct);
+    std::vector<cv::Mat> readImagesFromCam(const std::vector<cv::Mat> &cam, int from, int to);
+    void computeMask(int cam, const std::vector<cv::Mat> &img, int nb, double seuil, double bias,
+                     int step, int xmin, int xmax, int ymin, int ymax);
+    void computeCodes(int cam, int type, const std::vector<cv::Mat> &img);
     void prepareMatch();
     void forceBrute(int sp, unsigned char mix);
 
-	// Return std::tuple<LUT, MIX>
-	std::tuple<cv::Mat, cv::Mat> makeLUT(int cam);
+    // Return std::tuple<LUT, MIX>
+    std::tuple<cv::Mat, cv::Mat> makeLUT(int cam);
 
     int doLsh(int sp, unsigned char mix);
     int doHeuristique();
@@ -152,34 +147,34 @@ class leopard {
 
     void setPathL(int idx, std::string path, const char *filename);
 
-
   private:
 #ifdef USE_GMP
     void dumpCode(mpz_t *c);
     void dumpCodeNum(mpz_t *c);
-	int cost(mpz_t *a,mpz_t *b);
+    int cost(mpz_t *a, mpz_t *b);
 #else
     void dumpCode(unsigned long *c);
     void dumpCodeNum(unsigned long *c);
-	int cost(unsigned long *a,unsigned long *b);
+    int cost(unsigned long *a, unsigned long *b);
 #endif
     int bitCount(unsigned long n);
-	void match2image(cv::Mat &lut,minfo *match,unsigned char *mask,int w,int h,int ww,int hh);
-    void mix2image(cv::Mat &imgmix,minfo *match,unsigned char *mask,int w,int h,int ww,int hh);
+    void match2image(cv::Mat &lut, minfo *match, unsigned char *mask, int w, int h, int ww, int hh);
+    void mix2image(cv::Mat &imgmix, minfo *match, unsigned char *mask, int w, int h, int ww,
+                   int hh);
 
 #ifdef USE_GMP
-   int lsh(int dir, mpz_t *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
-                     mpz_t *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb,
-                     int aisCam, unsigned char mix);
-	int heuristique( mpz_t *codeA,minfo *matchA,unsigned char *maskA,int wa,int ha,
-					 mpz_t *codeB,minfo *matchB,unsigned char *maskB,int wb,int hb);
+    int lsh(int dir, mpz_t *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
+            mpz_t *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb, int aisCam,
+            unsigned char mix);
+    int heuristique(mpz_t *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha, mpz_t *codeB,
+                    minfo *matchB, unsigned char *maskB, int wb, int hb);
     void shiftCodes(int shift, mpz_t *codes, int w, int h);
 #else
     int lsh(int dir, unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
-                     unsigned long *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb,
-                     int aisCam, unsigned char mix);
-	int heuristique( unsigned long *codeA,minfo *matchA,unsigned char *maskA,int wa,int ha,
-					 unsigned long *codeB,minfo *matchB,unsigned char *maskB,int wb,int hb);
+            unsigned long *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb, int aisCam,
+            unsigned char mix);
+    int heuristique(unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
+                    unsigned long *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb);
     void shiftCodes(int shift, unsigned long *codes, int w, int h);
 #endif
 
@@ -188,8 +183,7 @@ class leopard {
     void initSP();
     void unInitSP();
 
-
-	//unsigned char bitCount[256]; // precomputed bit count
+    // unsigned char bitCount[256]; // precomputed bit count
 
 #if 0
 	int cost(unsigned char *a,unsigned char *b,int sz);
@@ -205,11 +199,6 @@ class leopard {
 	int sort(unsigned char *codeA,minfo *matchA,int wa,int ha,
                         unsigned char *codeB,minfo *matchB,int wb,int hb);
 #endif
-
-   
-
 };
 
-
 #endif
-

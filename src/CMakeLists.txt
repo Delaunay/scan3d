@@ -10,11 +10,13 @@ SET(SCAN3D_HDS
     leopard.hpp
 	triangulation.hpp
 	paths.hpp
+	util.hpp
 )
 
 SET(SCAN3D_SRC
     leopard.cpp
 	triangulation.cpp
+	util.cpp
 )
 
 # main library (prevent recompilation when building tests)
