@@ -10,10 +10,11 @@
 #include <gmp.h>
 #endif
 
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <opencv2/opencv.hpp>
+
+#include "util.hpp"
 
 class minfo {
   public:
@@ -37,26 +38,7 @@ enum LeopardFiles {
     IDX_SCAN_MEANP = 3
 };
 
-class Chronometer {
-  public:
-    typedef std::chrono::high_resolution_clock::time_point TimePoint;
-    typedef std::chrono::high_resolution_clock::duration Duration;
 
-    Chronometer() { start(); }
-
-    TimePoint start() {
-        _start = std::chrono::high_resolution_clock::now();
-        return _start;
-    }
-
-    template <typename T = std::ratio<1, 1>> double time() {
-        std::chrono::duration<double, T> dur = std::chrono::high_resolution_clock::now() - _start;
-        return dur.count();
-    }
-
-  private:
-    TimePoint _start;
-};
 
 #define TIMEIT(MSG, X)                                                                             \
     {                                                                                              \
@@ -65,7 +47,7 @@ class Chronometer {
         printf("%s: %4.4f", MSG, __chrono__.time())                                                \
     }
 
-class leopard {
+class Leopard {
 
     //
     // set by computeMask
@@ -124,11 +106,13 @@ class leopard {
     const char *fn_scan_meanp;
 
   public:
-    leopard(); // int w,int h, int nb, int freq, bool blur,string pid);
-    ~leopard();
+    Leopard(); // int w,int h, int nb, int freq, bool blur,string pid);
+    ~Leopard();
 
+	/*
     std::vector<cv::Mat> readImages(const char *name, int from, int to, double fct);
-    std::vector<cv::Mat> readImagesFromCam(const std::vector<cv::Mat> &cam, int from, int to);
+    std::vector<cv::Mat> readImagesFromCam(const std::vector<cv::Mat> &cam, int from, int to);*/
+
     void computeMask(int cam, const std::vector<cv::Mat> &img, int nb, double seuil, double bias,
                      int step, int xmin, int xmax, int ymin, int ymax);
     void computeCodes(int cam, int type, const std::vector<cv::Mat> &img);

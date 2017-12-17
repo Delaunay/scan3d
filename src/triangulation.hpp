@@ -10,7 +10,7 @@ enum TriangulationMode { TR_PROJ = 0, TR_CAM = 1 };
 // strings pour les noms de fichier
 enum TriangulationFiles { IDX_TR_MASK = 0, IDX_TR_DATA = 1, IDX_TR_PARC = 2, IDX_TR_PARP = 3 };
 
-class triangulation {
+class Triangulation {
 
     // projector
     cv::Mat internes_proj;
@@ -33,8 +33,8 @@ class triangulation {
     const char *fn_tr_parp;
 
   public:
-    triangulation();
-    ~triangulation();
+    Triangulation();
+    ~Triangulation();
 
     void triangulate(const cv::Mat &lutCam, const cv::Mat &lutProj);
 

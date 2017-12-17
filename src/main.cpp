@@ -8,14 +8,16 @@
 #include <chrono>
 #include <thread>
 
+#include "util.hpp"
 #include "leopard.hpp"
 #include "paths.hpp"
 #include "triangulation.hpp"
 
 using namespace cv;
 using namespace std;
+using namespace util;
 
-void testLeopardSeb() {
+void testLeopardSeb(const std::vector<cv::Mat>& imagesCam, const std::vector<cv::Mat>& imagesProj) {
     printf("----- test leopard seb -----\n");
 
     printf("sizeof char %d\n", (int)sizeof(char));
@@ -24,47 +26,40 @@ void testLeopardSeb() {
     printf("sizeof long %d\n", (int)sizeof(long));
     printf("sizeof long long %d\n", (int)sizeof(long long));
 
-    leopard L;
+	string pathscan = "";
+	int nb = imagesCam.size();
 
     // setup les output
-    string pathscan = "";
-    L.setPathL(IDX_SCAN_MASKC, pathscan, "maskcam.png");
-    L.setPathL(IDX_SCAN_MEANC, pathscan, "meancam.png");
-    L.setPathL(IDX_SCAN_MASKP, pathscan, "maskproj.png");
-    L.setPathL(IDX_SCAN_MEANP, pathscan, "meanproj.png");
+	Leopard leo;
+    leo.setPathL(IDX_SCAN_MASKC, pathscan, "maskcam.png");
+    leo.setPathL(IDX_SCAN_MEANC, pathscan, "meancam.png");
+    leo.setPathL(IDX_SCAN_MASKP, pathscan, "maskproj.png");
+    leo.setPathL(IDX_SCAN_MEANP, pathscan, "meanproj.png");
 
-    /// lire des images
-    int nb                         = 40;
-    std::vector<cv::Mat> imagesCam = L.readImages("data/cam1/cam%03d.jpg", 0, nb - 1, -1.0);
+    leo.computeMask(1, imagesCam, nb, 1.45, 5.0, 1, -1, -1, -1,-1); 
+    leo.computeCodes(1, LEOPARD_SIMPLE, imagesCam);
 
-    L.computeMask(1, imagesCam, nb, 1.45, 5.0, 1, -1, -1, -1,
-                  -1); // toute l'image
-    L.computeCodes(1, LEOPARD_SIMPLE, imagesCam);
-
-    std::vector<cv::Mat> imagesProj =
-        L.readImages("data/proj1/leopard_2560_1080_32B_%03d.jpg", 0, nb - 1, -1.0);
-
-    L.computeMask(0, imagesProj, nb, 1.45, 5.0, 1, -1, -1, -1,
-                  -1); // toute l'image
-    L.computeCodes(0, LEOPARD_SIMPLE, imagesProj);
+    leo.computeMask(0, imagesProj, nb, 1.45, 5.0, 1, -1, -1, -1,-1);
+    leo.computeCodes(0, LEOPARD_SIMPLE, imagesProj);
 
     // quelques stats
     // L->statsCodes(1);
     // L->statsCodes(0);
 
-    L.prepareMatch();
+    leo.prepareMatch();
     // L->forceBrute();
+
     for(int i = 0; i < 10; i++) {
         printf("--- %d ---\n", i);
-        L.doLsh(0, 0);
+        leo.doLsh(0, 0);
         // L->doHeuristique();
     }
 
     cv::Mat mixCam, lutCam;
     cv::Mat mixProj, lutProj;
 
-    std::tie(lutCam, mixCam)   = L.makeLUT(1);
-    std::tie(lutProj, mixProj) = L.makeLUT(0);
+    std::tie(lutCam, mixCam)   = leo.makeLUT(1);
+    std::tie(lutProj, mixProj) = leo.makeLUT(0);
 
     imwrite("lutcam.png", lutCam);
     imwrite("lutproj.png", lutProj);
@@ -72,9 +67,47 @@ void testLeopardSeb() {
     printf("----- done -----\n");
 }
 
-void testLeopardChaima(const string &nameCam, const string &nameProj, const string &namelutC,
+
+enum CostDirection {
+	Forward = 1,
+	BackWard = -1
+};
+
+double computeCost(Leopard& leo, bool forward, const std::vector<cv::Mat>& imagesCamDecal, const std::vector<cv::Mat>& imagesProj) {
+	int nb = imagesProj.size();
+	std::vector<cv::Mat> imagesProjMix(nb);
+
+	int start = 0;
+	int step = 1;
+	int bound = nb - 1;
+
+	if (!forward) {
+		printf("match avec la suivante! \n");
+		start = nb - 1;
+		step = -1;
+		bound = 0;
+	}
+
+	leo.prepareMatch();
+	for (int i = start; i < bound; i += step) {
+		imagesProjMix[i] = imagesProj[i] * 0.5 + imagesProj[i + step] * 0.5;
+	}
+	imagesProjMix[bound] = imagesProj[bound];
+
+	// QUAD
+	leo.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
+	leo.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
+
+	for (int j = 0; j < 10; j++)
+		leo.doLsh(0, 0);
+
+	return leo.sumCost();
+}
+
+void testLeopardChaima(const std::vector<Mat> &imagesCam, const std::vector<Mat> &imagesProj, const string &namelutC,
                        const string &namelutP, const string &namemixC, const string &namemixP,
-                       const std::vector<Mat> &imgCam, Mat &lutCam, Mat &lutProj, int sp) {
+                       Mat &lutCam, Mat &lutProj, int sp) {
+
     printf("----- test leopard chaima -----\n");
 
     printf("sizeof char %d\n", (int)sizeof(char));
@@ -83,131 +116,114 @@ void testLeopardChaima(const string &nameCam, const string &nameProj, const stri
     printf("sizeof long %d\n", (int)sizeof(long));
     printf("sizeof long long %d\n", (int)sizeof(long long));
 
+	int nb = imagesCam.size();
     Chronometer chrono;
-
-    leopard L;
+    Leopard leo;
 
     // setup les filename
-    L.setPathL(IDX_SCAN_MASKC, path, FN_SCAN_MASKC);
-    L.setPathL(IDX_SCAN_MEANC, path, FN_SCAN_MEANC);
-    L.setPathL(IDX_SCAN_MASKP, path, FN_SCAN_MASKP);
-    L.setPathL(IDX_SCAN_MEANP, path, FN_SCAN_MEANP);
+    leo.setPathL(IDX_SCAN_MASKC, path, FN_SCAN_MASKC);
+    leo.setPathL(IDX_SCAN_MEANC, path, FN_SCAN_MEANC);
+    leo.setPathL(IDX_SCAN_MASKP, path, FN_SCAN_MASKP);
+    leo.setPathL(IDX_SCAN_MEANP, path, FN_SCAN_MEANP);
 
-    int nb   = 60;
-    int from = 100;
+    leo.computeMask(1, imagesCam, nb, 0.65, 5.0, 1, -1, -1, -1, -1); // 815,815+20,815,815+20
+    leo.computeCodes(1, LEOPARD_SIMPLE, imagesCam);
 
-    // Camera: Images / Code simple
-    std::vector<Mat> imagesCam;
-    if(imgCam[0].rows != 0) {
-        imagesCam = L.readImagesFromCam(imgCam, from, from + nb - 1);
-    } else {
-        imagesCam = L.readImages(nameCam.c_str(), from, from + nb - 1, -1.0);
-    }
-
-    L.computeMask(1, imagesCam, nb, 0.65, 5.0, 1, -1, -1, -1,
-                  -1); // 815,815+20,815,815+20
-    L.computeCodes(1, LEOPARD_SIMPLE, imagesCam);
-
-    // Projecteur: Images / Code simple
-    std::vector<Mat> imagesProj = L.readImages(nameProj.c_str(), 0, nb - 1, -1.0);
-
-    L.computeMask(0, imagesProj, nb, 1.45, 5.0, 1, -1, -1, -1,
-                  -1); // toute l'image
-    L.computeCodes(0, LEOPARD_SIMPLE, imagesProj);
+    leo.computeMask(0, imagesProj, nb, 1.45, 5.0, 1, -1, -1, -1, -1);
+    leo.computeCodes(0, LEOPARD_SIMPLE, imagesProj);
 
     // Cherche la premiere image de la séquence camera
-    L.prepareMatch();
-    int posR = L.doShiftCodes();
+    leo.prepareMatch();
+    int posR = leo.doShiftCodes();
 
     std::vector<Mat> imagesCamDecal(nb);
     for(int i = 0; i < nb; i++)
         imagesCamDecal[i] = imagesCam[(i + posR) % nb];
 
     // Cherche le mix des images du projecteur
-    std::vector<Mat> imagesProjMix(nb);
-    int sumCostS = 0, sumCostP = 0;
 
+	int sumCostS = computeCost(leo, true, imagesCamDecal, imagesProj);
+	int sumCostP = computeCost(leo, false, imagesCamDecal, imagesProj);
+
+
+
+	/*
+	std::vector<Mat> imagesProjMix(nb);
     // Match avec l'image suivante
-    L.prepareMatch();
+    leo.prepareMatch();
     for(int i = 0; i < nb - 1; i++) {
         imagesProjMix[i] = imagesProj[i] * 0.5 + imagesProj[i + 1] * 0.5;
     }
     imagesProjMix[nb - 1] = imagesProj[nb - 1];
 
     // QUAD
-    L.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
-    L.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
+    leo.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
+    leo.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
 
     for(int j = 0; j < 10; j++)
-        L.doLsh(0, 0);
+        leo.doLsh(0, 0);
 
-    sumCostS = L.sumCost();
+    sumCostS = leo.sumCost();
 
     // Match avec la précédente
-    L.prepareMatch();
+    leo.prepareMatch();
     for(int i = nb - 1; i > 0; i--)
         imagesProjMix[i] = imagesProj[i] * 0.5 + imagesProj[i - 1] * 0.5;
     imagesProjMix[0] = imagesProj[0];
 
     // QUAD
-    L.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
-    L.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
+    leo.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
+    leo.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
 
     for(int j = 0; j < 10; j++)
-        L.doLsh(0, 0);
+        leo.doLsh(0, 0);
 
-    sumCostP = L.sumCost();
+    sumCostP = leo.sumCost();*/
 
     printf("\n sumSuivante = %d, sumPrécédente = %d \n", sumCostS, sumCostP);
 
     double timeSM = chrono.time();
 
     // Choix du mix
-    L.prepareMatch();
-    if(sumCostS < sumCostP) {
-        printf("\n match avec la suivante ! \n");
-        for(double fct = 0; fct <= 1; fct += 0.1) {
-            printf("\n\n---------------------- facteur = %.2f "
-                   "----------------------\n\n",
-                   fct);
+    leo.prepareMatch();
 
-            for(int i = 0; i < nb - 1; i++)
-                imagesProjMix[i] = imagesProj[i] * (1 - fct) + imagesProj[i + 1] * fct;
-            imagesProjMix[nb - 1] = imagesProj[nb - 1];
+	int start = 0;
+	int step = 1;
+	int bound = nb - 1;
 
-            // QUAD
-            L.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
-            L.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
+	if (sumCostS < sumCostP) {
+		printf("match avec la suivante! \n");
+		start = 0;
+		step = 1;
+		bound = nb - 1;
+	}
+	else {
+		printf("match avec la précédente! \n");
+		start = nb - 1;
+		step = -1;
+		bound = 0;
+	}
 
-            // TEST: pas de cumul
-            // L->prepareMatch();
-            for(int j = 0; j < 20; j++)
-                L.doLsh(sp, int(fct * 255));
+	std::vector<Mat> imagesProjMix(nb);
+    for(double fct = 0; fct <= 1; fct += 0.1) {
+        printf("---------------------- facteur = %.2f \n\n",
+                fct);
 
-            // L->forceBrute(sp,(int) (fct*255));
-        }
-    } else {
-        printf("\n match avec la précédente ! \n");
-        for(double fct = 0; fct <= 1; fct += 0.1) {
-            printf("\n\n---------------------- facteur = %.2f "
-                   "----------------------\n\n",
-                   fct);
+        for(int i = start; i < bound; i += step)
+            imagesProjMix[i] = imagesProj[i] * (1 - fct) + imagesProj[i + step] * fct;
 
-            for(int i = nb - 1; i > 0; i--)
-                imagesProjMix[i] = imagesProj[i] * (1 - fct) + imagesProj[i - 1] * fct;
-            imagesProjMix[0] = imagesProj[0];
+        imagesProjMix[bound] = imagesProj[bound];
 
-            // QUAD
-            L.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
-            L.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
+        // QUAD
+        leo.computeCodes(1, LEOPARD_QUADRATIC, imagesCamDecal);
+        leo.computeCodes(0, LEOPARD_QUADRATIC, imagesProjMix);
 
-            // TEST: pas de cumul
-            // L->prepareMatch();
-            for(int j = 0; j < 20; j++)
-                L.doLsh(sp, int(fct * 255));
+        // TEST: pas de cumul
+        // L->prepareMatch();
+        for(int j = 0; j < 20; j++)
+            leo.doLsh(sp, int(fct * 255));
 
-            // L->forceBrute(sp,(int) (fct*255));
-        }
+        // L->forceBrute(sp,(int) (fct*255));
     }
 
     chrono.start();
@@ -216,8 +232,8 @@ void testLeopardChaima(const string &nameCam, const string &nameProj, const stri
     cv::Mat mixCam;
     cv::Mat mixProj;
 
-    std::tie(lutCam, mixCam)   = L.makeLUT(1);
-    std::tie(lutProj, mixProj) = L.makeLUT(0);
+    std::tie(lutCam, mixCam)   = leo.makeLUT(1);
+    std::tie(lutProj, mixProj) = leo.makeLUT(0);
 
     imwrite(namelutC, lutCam);
     imwrite(namelutP, lutProj);
@@ -269,7 +285,6 @@ std::tuple<std::vector<Mat>, bool> capture(int image_number, const std::string &
     double ys = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 
     cout << "x = " << xs << "   y = " << ys << endl;
-
     cout << "Time : " << timeE / image_number << endl;
     cout << "Time (" << image_number << " images): " << timeE << endl;
     waitKey(0);
@@ -291,9 +306,6 @@ int main(int argc, char *argv[]) {
 
     const int nbImages = 300;
     std::vector<Mat> img(nbImages);
-
-    string nameCam  = FN_CAP_CAM;
-    string nameProj = FN_CAP_PROJ;
 
     // Créer des directory pour stocker les images
 #ifdef __linux__
@@ -348,13 +360,38 @@ int main(int argc, char *argv[]) {
     Mat lutProj;
 
     if(doScan) {
+		std::string nameCam = "data/cam1/cam%03d.jpg";
+		std::string nameProj = "data/proj1/leopard_2560_1080_32B_%03d.jpg";
 
         if(roys) {
-            testLeopardSeb();
-        } else if(elasmi) {
-            testLeopardChaima(nameCam, nameProj, (path + FN_SCAN_LUTC), (path + FN_SCAN_LUTP),
-                              (path + FN_SCAN_MIXC), (path + FN_SCAN_MIXP), img, lutCam, lutProj,
-                              doSp);
+			// Load images
+			int nb = 40;
+
+			std::vector<cv::Mat> imagesCam = util::readImages(nameCam.c_str(), 0, nb - 1, -1.0);
+			std::vector<cv::Mat> imagesProj = util::readImages(nameProj.c_str(), 0, nb - 1, -1.0);
+
+            testLeopardSeb(imagesCam, imagesProj);
+        } 
+		else if(elasmi) {
+			nameCam = FN_CAP_CAM;
+			nameProj = FN_CAP_PROJ;
+
+			int nb = 60;
+			int from = 100;
+
+			std::vector<cv::Mat> imagesCam;
+
+			if (img[0].rows != 0) {
+				imagesCam = util::readImagesFromCam(img, from, from + nb - 1);
+			}
+			else {
+				imagesCam = util::readImages(nameCam.c_str(), 0, nb - 1, -1.0);
+			}
+				
+			std::vector<cv::Mat> imagesProj = util::readImages(nameProj.c_str(), 0, nb - 1, -1.0);
+
+            testLeopardChaima(imagesCam, imagesProj, (path + FN_SCAN_LUTC), (path + FN_SCAN_LUTP),
+                              (path + FN_SCAN_MIXC), (path + FN_SCAN_MIXP), lutCam, lutProj, doSp);
         }
     } else {
         printf("----- Pas de scan -----\n");
@@ -365,17 +402,17 @@ int main(int argc, char *argv[]) {
 
     /* ----------------------- Triangulation ----------------------- */
     if(doTriangule) {
-        triangulation T;
+        Triangulation tri;
 
         string pathvide = "";
 
         // Paths
-        T.setPathT(IDX_TR_MASK, path, FN_TR_MASK);
-        T.setPathT(IDX_TR_DATA, path, FN_TR_DATA);
-        T.setPathT(IDX_TR_PARC, pathvide, FN_TR_PARC);
-        T.setPathT(IDX_TR_PARP, pathvide, FN_TR_PARP);
+		tri.setPathT(IDX_TR_MASK, path, FN_TR_MASK);
+		tri.setPathT(IDX_TR_DATA, path, FN_TR_DATA);
+		tri.setPathT(IDX_TR_PARC, pathvide, FN_TR_PARC);
+		tri.setPathT(IDX_TR_PARP, pathvide, FN_TR_PARP);
 
-        T.triangulate(lutCam, lutProj);
+		tri.triangulate(lutCam, lutProj);
     }
 
     return 0;

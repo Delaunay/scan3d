@@ -1,4 +1,5 @@
 #include "leopard.hpp"
+#include "util.hpp"
 
 #include <array>
 #include <fstream>
@@ -8,22 +9,10 @@
 #define M_PI 3.14159265359
 #endif
 
-#ifndef __linux__
-#include <random>
 
-std::mt19937 &random_engine() {
-    std::random_device rd;
-    static std::mt19937 engine(rd());
-    return engine;
-}
-
-// non-negative, double-precision, floating-point values, uniformly distributed
-// over the interval [0.0 , 1.0].
-double drand48() {
-    static std::uniform_real_distribution<> dist(0, 1);
-    return dist(random_engine());
-}
-#endif
+using namespace cv;
+using namespace std;
+using namespace util;
 
 //
 // pattern leopard
@@ -31,7 +20,7 @@ double drand48() {
 // match camera et projecteur
 //
 
-using namespace cv;
+
 
 // difference min entre un max et un min pour un pixel "actif"
 //#define ACTIVE_DIFFERENCE	96
@@ -55,7 +44,7 @@ typedef struct {
     unsigned int vmask; // voting mask (nv bits)
 } bminfo;
 
-leopard::leopard() {
+Leopard::Leopard() {
     printf("leopard init!\n");
     n         = 0;
     maskCam   = NULL;
@@ -80,7 +69,7 @@ leopard::leopard() {
     initSP();
 }
 
-leopard::~leopard() {
+Leopard::~Leopard() {
     printf("leopard uninit!\n");
     if(maskProj)
         free(maskProj);
@@ -114,7 +103,7 @@ double leopard::horloge() {
         return((double)tv.tv_sec+tv.tv_usec/1000000.0);
 }*/
 
-// On passe le nom des images
+/*/ On passe le nom des images
 std::vector<cv::Mat> leopard::readImages(const char *name, int from, int to, double fct) {
     printf("-- reading images %s --\n", name);
     int nb = to - from + 1;
@@ -169,7 +158,7 @@ std::vector<cv::Mat> leopard::readImagesFromCam(const std::vector<Mat> &cam, int
         }
     }
     return image;
-}
+}*/
 
 //
 // On calcule un ratio binmodal/unimodal
@@ -179,7 +168,7 @@ std::vector<cv::Mat> leopard::readImagesFromCam(const std::vector<Mat> &cam, int
 // offx,offy : decallage x,y. DOIT ETRE <step
 //
 
-void leopard::computeMask(int cam, const std::vector<cv::Mat> &img, int nb, double seuil,
+void Leopard::computeMask(int cam, const std::vector<cv::Mat> &img, int nb, double seuil,
                           double bias, int step, int xmin, int xmax, int ymin, int ymax) {
     int nr = img[0].rows;
     int nc = img[0].cols;
@@ -386,7 +375,7 @@ void leopard::dumpCode(mpz_t *c) {
     // for(int i=0;i<nbb;i++) printf("%d",mpz_tstbit(*c,i));
 }
 #else
-void leopard::dumpCode(unsigned long *c) {
+void Leopard::dumpCode(unsigned long *c) {
     int one = 0;
     for(int i = 0; i < nbb; i++) {
         int b              = i / 64;
@@ -404,7 +393,7 @@ void leopard::dumpCode(unsigned long *c) {
 #ifdef USE_GMP
 void leopard::dumpCodeNum(mpz_t *c) { printf("%s\n", mpz_get_str(NULL, 10, *c)); }
 #else
-void leopard::dumpCodeNum(unsigned long *c) {
+void Leopard::dumpCodeNum(unsigned long *c) {
     for(int b = 0; b < nb; b++) {
         printf("%lu ", c[b]);
     }
@@ -566,7 +555,7 @@ void leopard::computeCodes(int cam, int type, cv::Mat *img) {
 
 #else
 
-void leopard::computeCodes(int cam, int type, const std::vector<cv::Mat> &img) {
+void Leopard::computeCodes(int cam, int type, const std::vector<cv::Mat> &img) {
     printf("-- compute codes cam=%d type=%d n=%d --\n", cam, type, n);
 
     int w, h;
@@ -741,7 +730,7 @@ void leopard::computeCodes(int cam, int type, const std::vector<cv::Mat> &img) {
 void leopard::statsCodes(int cam) { printf("NA0\n"); }
 #else
 // cam:1=yes,0=no
-void leopard::statsCodes(int cam) {
+void Leopard::statsCodes(int cam) {
 
     int w, h;
     unsigned char *mask;
@@ -821,7 +810,7 @@ void leopard::statsCodes(int cam) {
 }
 #endif
 
-void leopard::prepareMatch() {
+void Leopard::prepareMatch() {
     // les matchs
     if(matchCam == NULL)
         matchCam = (minfo *)malloc(wc * hc * sizeof(minfo));
@@ -866,13 +855,13 @@ double align(int *test, int *ref, double sx, double sy, int w) {
     return sum;
 }
 
-void leopard::initSP() {
+void Leopard::initSP() {
     wDecal  = 5;
     ptsCam  = (int *)malloc((2 * wDecal + 1) * (2 * wDecal + 1) * sizeof(int));
     ptsProj = (int *)malloc((2 * wDecal + 1) * (2 * wDecal + 1) * sizeof(int));
 }
 
-void leopard::unInitSP() {
+void Leopard::unInitSP() {
     free(ptsCam);
     free(ptsProj);
 }
@@ -883,7 +872,7 @@ void leopard::unSousPixels(int i) { printf("NA1\n"); }
 // sousPixels pour le pixel i de la caméra
 // le point de départ caméra est un entier et le point d'arrivée projecteur est
 // en sp
-void leopard::unSousPixels(int i) {
+void Leopard::unSousPixels(int i) {
 
     if(i % wc == 0)
         printf("%d\n", i / wc);
@@ -931,7 +920,7 @@ void leopard::unSousPixels(int i) {
 }
 #endif
 
-void leopard::sousPixels() {
+void Leopard::sousPixels() {
     for(int i = 0; i < wc * hc; i++) {
         unSousPixels(i);
     }
@@ -940,7 +929,7 @@ void leopard::sousPixels() {
 #ifdef USE_GMP
 void leopard::forceBrute(int sp, unsigned char mix) { printf("NA2\n"); }
 #else
-void leopard::forceBrute(int sp, unsigned char mix) {
+void Leopard::forceBrute(int sp, unsigned char mix) {
     Chronometer chrono;
     int step = wc * hc / 100;
     for(int i = 0; i < wc * hc; i++) {
@@ -975,7 +964,7 @@ void leopard::forceBrute(int sp, unsigned char mix) {
 //     0 = pas de sp
 // dans tous les cas, seulement la caméra qui a le sp
 // mix pour information seulement
-int leopard::doLsh(int sp, unsigned char mix) {
+int Leopard::doLsh(int sp, unsigned char mix) {
     // de cam vers proj, dans les deux directions
     // aisCam == 1
     lsh(0, codeCam, matchCam, maskCam, wc, hc, codeProj, matchProj, maskProj, wp, hp, sp ? 1 : -1,
@@ -991,7 +980,7 @@ int leopard::doLsh(int sp, unsigned char mix) {
     return 0;
 }
 
-int leopard::doHeuristique() {
+int Leopard::doHeuristique() {
     heuristique(codeCam, matchCam, maskCam, wc, hc, codeProj, matchProj, maskProj, wp, hp);
     heuristique(codeProj, matchProj, maskProj, wp, hp, codeCam, matchCam, maskCam, wc, hc);
     return 0;
@@ -1006,7 +995,7 @@ int leopard::lsh(int dir, mpz_t *codeA, minfo *matchA, unsigned char *maskA, int
                  mpz_t *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb, int aisCam,
                  unsigned char mix) {
 #else
-int leopard::lsh(int dir, unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
+int Leopard::lsh(int dir, unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
                  unsigned long *codeB, minfo *matchB, unsigned char *maskB, int wb, int hb,
                  int aisCam, unsigned char mix) {
 #endif
@@ -1201,7 +1190,7 @@ int leopard::lsh(int dir, unsigned long *codeA, minfo *matchA, unsigned char *ma
     return (vide);
 }
 
-int leopard::sumCost() {
+int Leopard::sumCost() {
     int sum = 0;
     for(int i = 0; i < wc * hc; i++) {
         if(matchCam[i].cost < 1000)
@@ -1213,7 +1202,7 @@ int leopard::sumCost() {
 #ifdef USE_GMP
 void leopard::shiftCodes(int shift, mpz_t *codes, int w, int h) { printf("NA3\n"); }
 #else
-void leopard::shiftCodes(int shift, unsigned long *codes, int w, int h) {
+void Leopard::shiftCodes(int shift, unsigned long *codes, int w, int h) {
     printf("\n Code Cam \n");
     dumpCode(codes + 256300 * nb);
 
@@ -1259,7 +1248,7 @@ void leopard::shiftCodes(int shift, unsigned long *codes, int w, int h) {
 #ifdef USE_GMP
 int leopard::doShiftCodes() { printf("NA4\n"); }
 #else
-int leopard::doShiftCodes() {
+int Leopard::doShiftCodes() {
     // create a file
     // string const myFile("/home/chaima/Documents/Mathematica/Sum.txt");
     // std::ofstream sumVide(myFile.c_str());
@@ -1346,7 +1335,7 @@ int leopard::heuristique(mpz_t *codeA, minfo *matchA, unsigned char *maskA, int 
     printf("na\n");
 }
 #else
-int leopard::heuristique(unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
+int Leopard::heuristique(unsigned long *codeA, minfo *matchA, unsigned char *maskA, int wa, int ha,
                          unsigned long *codeB, minfo *matchB, unsigned char *maskB, int wb,
                          int hb) {
     // pour chaque cam[i] -> proj[j]
@@ -1407,7 +1396,7 @@ int leopard::heuristique(unsigned long *codeA, minfo *matchA, unsigned char *mas
 }
 #endif
 
-int leopard::bitCount(unsigned long n) {
+int Leopard::bitCount(unsigned long n) {
     n = (0x5555555555555555L & (n >> 1)) + (0x5555555555555555L & n);
     n = (0x3333333333333333L & (n >> 2)) + (0x3333333333333333L & n);
     // a partir de 4, plus de probleme de carry bit parce que 4 utilise 3 bits,
@@ -1448,7 +1437,7 @@ int leopard::bitCount(unsigned long n) {
 #ifdef USE_GMP
 int leopard::cost(mpz_t *a, mpz_t *b) { return mpz_hamdist(*a, *b); }
 #else
-int leopard::cost(unsigned long *a, unsigned long *b) {
+int Leopard::cost(unsigned long *a, unsigned long *b) {
     // printf("A: ");dumpCode(a);printf("\n");
     // printf("B: ");dumpCode(b);printf("\n");
     int c = 0;
@@ -1459,7 +1448,7 @@ int leopard::cost(unsigned long *a, unsigned long *b) {
 }
 #endif
 
-std::tuple<cv::Mat, cv::Mat> leopard::makeLUT(int cam) {
+std::tuple<cv::Mat, cv::Mat> Leopard::makeLUT(int cam) {
     cv::Mat imgmix;
     cv::Mat lut;
     if(cam) {
@@ -1473,7 +1462,7 @@ std::tuple<cv::Mat, cv::Mat> leopard::makeLUT(int cam) {
 }
 
 // output une image pour le match (imager w x h) vers une image ww x hh
-void leopard::match2image(cv::Mat &lut, minfo *match, unsigned char *mask, int w, int h, int ww,
+void Leopard::match2image(cv::Mat &lut, minfo *match, unsigned char *mask, int w, int h, int ww,
                           int hh) {
     lut.create(h, w, CV_16UC3);
     int x, y, xx, yy, cc, dxx, dyy;
@@ -1497,7 +1486,7 @@ void leopard::match2image(cv::Mat &lut, minfo *match, unsigned char *mask, int w
 }
 
 // output une image pour le mix (imager w x h) vers une image ww x hh
-void leopard::mix2image(cv::Mat &imgmix, minfo *match, unsigned char *mask, int w, int h, int ww,
+void Leopard::mix2image(cv::Mat &imgmix, minfo *match, unsigned char *mask, int w, int h, int ww,
                         int hh) {
     imgmix.create(h, w, CV_8UC1);
     int x, y;
@@ -1513,7 +1502,7 @@ void leopard::mix2image(cv::Mat &imgmix, minfo *match, unsigned char *mask, int 
         }
 }
 
-void leopard::setPathL(int idx, std::string path, const char *filename) {
+void Leopard::setPathL(int idx, std::string path, const char *filename) {
 
     std::string newfilename = path + (std::string)filename;
 

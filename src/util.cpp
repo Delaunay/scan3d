@@ -2,6 +2,18 @@
 
 using namespace cv;
 
+namespace util{
+std::mt19937 &random_engine() {
+	std::random_device rd;
+	static std::mt19937 engine(rd());
+	return engine;
+}
+
+double drand48() {
+	static std::uniform_real_distribution<> dist(0, 1);
+	return dist(random_engine());
+}
+
 // On passe le nom des images
 std::vector<cv::Mat> readImages(const char *name, int from, int to, double fct) {
     printf("-- reading images %s --\n", name);
@@ -57,4 +69,5 @@ std::vector<cv::Mat> readImagesFromCam(const std::vector<Mat> &cam, int from, in
         }
     }
     return image;
+}
 }

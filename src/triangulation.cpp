@@ -10,7 +10,7 @@
 using namespace cv;
 using namespace std;
 
-triangulation::triangulation() {
+Triangulation::Triangulation() {
     cout << endl;
     cout << "----- Triangulation -----" << endl;
 
@@ -33,12 +33,12 @@ triangulation::triangulation() {
     fn_tr_parp = NULL;
 }
 
-triangulation::~triangulation() {
+Triangulation::~Triangulation() {
     cout << endl;
     cout << "----- Triangulation Done -----" << endl;
 }
 
-int triangulation::initMat(const string &file, Mat &internes, Mat &rotation, Mat &translation,
+int Triangulation::initMat(const string &file, Mat &internes, Mat &rotation, Mat &translation,
                            Mat &distCoeffs) {
 
     FileStorage fsI(file, FileStorage::READ);
@@ -56,7 +56,7 @@ int triangulation::initMat(const string &file, Mat &internes, Mat &rotation, Mat
     return 0;
 }
 
-void triangulation::composePoseMatrix(Mat &poseMatrix, const Mat &rotation,
+void Triangulation::composePoseMatrix(Mat &poseMatrix, const Mat &rotation,
                                       const Mat &translation) {
 
     Mat idt       = Mat::eye(3, 4, CV_64F);
@@ -88,7 +88,7 @@ double randAToB(double a, double b) { return a + (rand() / (RAND_MAX / (b - a)))
 
 double randAOrB(double a, double b) { return (rand() % 2) * (b - a) + a; }
 
-int triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, const Mat &lutSrc,
+int Triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, const Mat &lutSrc,
                               const Mat &lutDst) {
 
     int lutSrc_r = lutSrc.rows;
@@ -156,7 +156,7 @@ int triangulation::matrixCorr(Mat &pointsLut, Mat &pointsCorr, const Mat &lutSrc
     return n;
 }
 
-Mat triangulation::undistortMatrix(const Mat &pointsInput, const Mat &internes,
+Mat Triangulation::undistortMatrix(const Mat &pointsInput, const Mat &internes,
                                    const Mat &distCoeffs) {
 
     Mat pointsInputTr = pointsInput.t();
@@ -178,7 +178,7 @@ Mat triangulation::undistortMatrix(const Mat &pointsInput, const Mat &internes,
     return pointsOutput;
 }
 
-int triangulation::lut2corr(const Mat &lutSrc, const Mat &internesSrc, const Mat &distCoeffsSrc,
+int Triangulation::lut2corr(const Mat &lutSrc, const Mat &internesSrc, const Mat &distCoeffsSrc,
                             Mat &pointsUndSrc, const Mat &lutDst, const Mat &internesDst,
                             const Mat &distCoeffsDst, Mat &pointsUndDst) {
 
@@ -207,7 +207,7 @@ int triangulation::lut2corr(const Mat &lutSrc, const Mat &internesSrc, const Mat
     return size;
 }
 
-int triangulation::saveMat(const Mat &point4D) {
+int Triangulation::saveMat(const Mat &point4D) {
 
     FileStorage fsS(fn_tr_data, FileStorage::WRITE);
     if(!fsS.isOpened()) {
@@ -222,7 +222,7 @@ int triangulation::saveMat(const Mat &point4D) {
     return 0;
 }
 
-void triangulation::triangulate(const Mat &lutCam, const Mat &lutProj) {
+void Triangulation::triangulate(const Mat &lutCam, const Mat &lutProj) {
 
     /* ---Projecteur--- */
 
@@ -312,7 +312,7 @@ void triangulation::triangulate(const Mat &lutCam, const Mat &lutProj) {
     saveMat(point4D);
 }
 
-void triangulation::setPathT(int idx, const string &path, const char *filename) {
+void Triangulation::setPathT(int idx, const string &path, const char *filename) {
 
     string newfilename = path + string(filename);
 
